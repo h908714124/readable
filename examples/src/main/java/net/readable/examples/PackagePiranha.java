@@ -3,11 +3,11 @@ package net.readable.examples;
 import net.readable.Readable;
 
 @Readable
-final class PackagePinranha {
+final class PackagePiranha {
 
   private final boolean foo;
 
-  PackagePinranha(boolean foo) {
+  PackagePiranha(boolean foo) {
     this.foo = foo;
   }
   

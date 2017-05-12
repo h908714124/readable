@@ -8,7 +8,7 @@ import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.not;
 import static org.junit.Assert.assertThat;
 
-public class PackagePinranhaTest {
+public class PackagePiranhaTest {
 
   @Test
   public void testAccess() throws Exception {
@@ -20,7 +20,7 @@ public class PackagePinranhaTest {
         PackagePinranha_Builder.class.getDeclaredMethod("builder").getModifiers());
     assertThat(builderMethodModifiers, not(containsString("public")));
     String toBuilderMethodModifiers = Modifier.toString(
-        PackagePinranha_Builder.class.getDeclaredMethod("builder", PackagePinranha.class)
+        PackagePinranha_Builder.class.getDeclaredMethod("builder", PackagePiranha.class)
             .getModifiers());
     assertThat(toBuilderMethodModifiers, not(containsString("public")));
     String factoryMethodModifiers = Modifier.toString(

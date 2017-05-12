@@ -1,5 +1,6 @@
 package net.readable.compiler;
 
+import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.TypeName;
 
 import javax.lang.model.element.ExecutableElement;
@@ -57,6 +58,12 @@ final class Property {
       return executableElement.getSimpleName() + "()";
     }
     return field.getSimpleName().toString();
+  }
+
+  FieldSpec.Builder asField() {
+    return FieldSpec.builder(type(),
+        propertyName())
+        .addModifiers(PRIVATE);
   }
 
   String propertyName() {

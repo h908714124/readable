@@ -1,30 +1,33 @@
 package net.readable.compiler;
 
-import static javax.lang.model.element.Modifier.ABSTRACT;
-import static javax.lang.model.element.Modifier.FINAL;
-import static javax.lang.model.element.Modifier.PRIVATE;
-import static javax.lang.model.element.Modifier.STATIC;
-import static net.readable.compiler.ReadableProcessor.rawType;
-
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.TypeSpec;
-import java.util.Arrays;
+
 import javax.annotation.Generated;
+import java.util.Arrays;
+
+import static javax.lang.model.element.Modifier.ABSTRACT;
+import static javax.lang.model.element.Modifier.FINAL;
+import static javax.lang.model.element.Modifier.PRIVATE;
+import static javax.lang.model.element.Modifier.STATIC;
+import static net.readable.compiler.ReadableProcessor.rawType;
 
 final class Analyser {
 
   private final Model model;
   private final MethodSpec initMethod;
+  private final MethodSpec staticBuildMethod;
   private final RefTrackingBuilder refTrackingBuilder;
 
   private Analyser(Model model) {
     this.model = model;
     this.initMethod = initMethod(model);
-    this.refTrackingBuilder = RefTrackingBuilder.create(model);
+    this.staticBuildMethod = staticBuildMethod(model);
+    this.refTrackingBuilder = RefTrackingBuilder.create(model, staticBuildMethod);
   }
 
   static Analyser create(Model model) {
@@ -37,20 +40,23 @@ final class Analyser {
     builder.addMethod(builderMethodWithParam());
     builder.addMethod(perThreadFactoryMethod(refTrackingBuilder));
     builder.addMethod(initMethod);
+    builder.addMethod(staticBuildMethod);
     builder.addMethod(abstractBuildMethod());
-    builder.addType(SimpleBuilder.create(model).define());
+    builder.addType(SimpleBuilder.create(model, staticBuildMethod)
+        .define());
     builder.addType(refTrackingBuilder.define());
     builder.addType(PerThreadFactory.create(model, initMethod, refTrackingBuilder)
         .define());
-    for (Property parameter : model.accessorPairs) {
-      FieldSpec field = FieldSpec.builder(parameter.type(), parameter.propertyName()).build();
-      ParameterSpec p = ParameterSpec.builder(parameter.type(), parameter.propertyName()).build();
+    for (Property property : model.properties) {
+      FieldSpec field = property.asField().build();
+      ParameterSpec p = ParameterSpec.builder(property.type(), property.propertyName()).build();
       builder.addField(field);
-      builder.addMethod(setterMethod(parameter, field, p));
+      builder.addMethod(setterMethod(property, field, p));
     }
     return builder.addModifiers(model.maybePublic())
         .addModifiers(ABSTRACT)
         .addMethod(MethodSpec.constructorBuilder()
+            .addModifiers(PRIVATE)
             .build())
         .addAnnotation(AnnotationSpec.builder(Generated.class)
             .addMember("value", "$S", ReadableProcessor.class.getCanonicalName())
@@ -101,13 +107,36 @@ final class Analyser {
         .addStatement("throw new $T($S)",
             NullPointerException.class, "Null " + input.name)
         .endControlFlow();
-    for (Property accessorPair : model.accessorPairs) {
+    for (Property accessorPair : model.properties) {
       block.addStatement("$N.$N($N.$L)", builder, accessorPair.propertyName(),
           input, accessorPair.access());
     }
     return MethodSpec.methodBuilder("init")
         .addCode(block.build())
         .addParameters(Arrays.asList(builder, input))
+        .addModifiers(PRIVATE, STATIC)
+        .build();
+  }
+
+  private static MethodSpec staticBuildMethod(Model model) {
+    ParameterSpec builder = ParameterSpec.builder(model.generatedClass,
+        "builder").build();
+    CodeBlock.Builder block = CodeBlock.builder();
+    for (int i = 0; i < model.properties.size(); i++) {
+      Property property = model.properties.get(i);
+      FieldSpec f = property.asField().build();
+      if (i > 0) {
+        block.add(",");
+      }
+      block.add("\n    $N.$N", builder, f);
+    }
+    return MethodSpec.methodBuilder("build")
+        .addCode("return new $T(", model.sourceClass())
+        .addCode(block.build())
+        .addCode(");\n")
+        .addTypeVariables(model.typevars())
+        .returns(model.sourceClass())
+        .addParameter(builder)
         .addModifiers(PRIVATE, STATIC)
         .build();
   }

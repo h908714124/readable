@@ -2,14 +2,13 @@ package net.readable.compiler;
 
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.TypeName;
+import com.squareup.javapoet.TypeVariableName;
 
-import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
-import javax.lang.model.util.ElementFilter;
 import java.util.List;
 
-import static javax.lang.model.element.Modifier.PRIVATE;
+import static java.util.stream.Collectors.toList;
 import static javax.lang.model.element.Modifier.PUBLIC;
 import static net.readable.compiler.ReadableProcessor.rawType;
 
@@ -21,7 +20,7 @@ final class Model {
 
   final TypeName generatedClass;
   final TypeElement sourceClassElement;
-  final List<Property> accessorPairs;
+  final List<Property> properties;
   final ClassName simpleBuilderClass;
   final ClassName refTrackingBuilderClass;
 
@@ -31,19 +30,12 @@ final class Model {
                 ClassName refTrackingBuilderClass) {
     this.generatedClass = generatedClass;
     this.sourceClassElement = sourceClassElement;
-    this.accessorPairs = MethodScanner.scan(sourceClassElement);
+    this.properties = MethodScanner.scan(sourceClassElement);
     this.simpleBuilderClass = simpleBuilderClass;
     this.refTrackingBuilderClass = refTrackingBuilderClass;
   }
 
-  static Model create(TypeElement sourceClassElement) { List<ExecutableElement> constructors = ElementFilter.constructorsIn(
-        sourceClassElement.getEnclosedElements());
-    if (constructors.stream()
-        .noneMatch(c -> !c.getModifiers().contains(PRIVATE) &&
-            c.getParameters().isEmpty())) {
-      throw new ValidationException(
-          "Default constructor not found", sourceClassElement);
-    }
+  static Model create(TypeElement sourceClassElement) {
     ClassName generatedClass = peer(TypeName.get(sourceClassElement.asType()));
     ClassName simpleBuilderClass = generatedClass.nestedClass("SimpleBuilder");
     ClassName refTrackingBuilderClass =
@@ -67,6 +59,12 @@ final class Model {
       return PUBLIC_MODIFIER;
     }
     return NO_MODIFIERS;
+  }
+
+  List<TypeVariableName> typevars() {
+    return sourceClassElement.getTypeParameters().stream()
+        .map(TypeVariableName::get)
+        .collect(toList());
   }
 
   ClassName sourceClass() {

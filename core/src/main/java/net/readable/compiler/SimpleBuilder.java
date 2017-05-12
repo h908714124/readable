@@ -11,13 +11,16 @@ import static net.readable.compiler.ReadableProcessor.rawType;
 final class SimpleBuilder {
 
   private final Model model;
+  private final MethodSpec staticBuildMethod;
 
-  private SimpleBuilder(Model model) {
+  private SimpleBuilder(Model model, MethodSpec staticBuildMethod) {
     this.model = model;
+    this.staticBuildMethod = staticBuildMethod;
   }
 
-  static SimpleBuilder create(Model model) {
-    return new SimpleBuilder(model);
+  static SimpleBuilder create(Model model,
+                              MethodSpec staticBuildMethod) {
+    return new SimpleBuilder(model, staticBuildMethod);
   }
 
   TypeSpec define() {
@@ -31,7 +34,8 @@ final class SimpleBuilder {
   private MethodSpec buildMethod() {
     return MethodSpec.methodBuilder("build")
         .addAnnotation(Override.class)
-        .addStatement("return super.build()")
+        .addStatement("return $T.$N(this)",
+            rawType(model.generatedClass), staticBuildMethod)
         .returns(model.sourceClass())
         .addModifiers(model.maybePublic())
         .build();
