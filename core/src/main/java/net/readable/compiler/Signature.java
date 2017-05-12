@@ -69,6 +69,6 @@ final class Signature {
 
   @Override
   public String toString() {
-    return propertyName + " : " + propertyType;
+    return "[" + propertyName + " : " + propertyType + "]";
   }
 }

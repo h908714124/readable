@@ -26,6 +26,7 @@ final class SimpleBuilder {
   TypeSpec define() {
     return TypeSpec.classBuilder(rawType(model.simpleBuilderClass))
         .superclass(model.generatedClass)
+        .addTypeVariables(model.typevars())
         .addMethod(buildMethod())
         .addModifiers(PRIVATE, STATIC, FINAL)
         .build();
@@ -36,7 +37,7 @@ final class SimpleBuilder {
         .addAnnotation(Override.class)
         .addStatement("return $T.$N(this)",
             rawType(model.generatedClass), staticBuildMethod)
-        .returns(model.sourceClass())
+        .returns(model.sourceClass)
         .addModifiers(model.maybePublic())
         .build();
   }

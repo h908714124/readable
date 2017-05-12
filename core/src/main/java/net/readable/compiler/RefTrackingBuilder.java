@@ -33,15 +33,18 @@ final class RefTrackingBuilder {
     this.inUse = FieldSpec.builder(TypeName.BOOLEAN, "inUse", PRIVATE).build();
   }
 
-  private static ClassName perThreadFactoryClass(Model model) {
+  static ClassName perThreadFactoryClass(Model model) {
     return rawType(model.generatedClass)
         .nestedClass("PerThreadFactory");
   }
 
   static RefTrackingBuilder create(Model model,
                                    MethodSpec staticBuildMethod) {
-    ClassName perThreadFactoryClass = perThreadFactoryClass(model);
-    return new RefTrackingBuilder(model, staticBuildMethod, model.refTrackingBuilderClass, perThreadFactoryClass);
+    return model.optionalRefTrackingBuilderClass().map(refTrackingBuilderClass -> {
+      ClassName perThreadFactoryClass = perThreadFactoryClass(model);
+      return new RefTrackingBuilder(model, staticBuildMethod,
+          refTrackingBuilderClass, perThreadFactoryClass);
+    }).orElse(null);
   }
 
   TypeSpec define() {
@@ -54,9 +57,9 @@ final class RefTrackingBuilder {
   }
 
   private MethodSpec buildMethod() {
-    ParameterSpec result = ParameterSpec.builder(model.sourceClass(), "result").build();
+    ParameterSpec result = ParameterSpec.builder(model.sourceClass, "result").build();
     CodeBlock.Builder builder = CodeBlock.builder()
-        .addStatement("$T $N = $T.$N(this)", model.sourceClass(), result,
+        .addStatement("$T $N = $T.$N(this)", model.sourceClass, result,
             rawType(model.generatedClass), staticBuildMethod);
     for (Property property : model.properties) {
       if (property.type() instanceof ClassName ||
@@ -70,7 +73,7 @@ final class RefTrackingBuilder {
     return MethodSpec.methodBuilder("build")
         .addAnnotation(Override.class)
         .addCode(builder.build())
-        .returns(model.sourceClass())
+        .returns(model.sourceClass)
         .addModifiers(model.maybePublic())
         .build();
   }

@@ -1,13 +1,17 @@
 package net.readable.compiler;
 
 import com.squareup.javapoet.ClassName;
+import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeVariableName;
 
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
+import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
+import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static javax.lang.model.element.Modifier.PUBLIC;
 import static net.readable.compiler.ReadableProcessor.rawType;
@@ -20,34 +24,53 @@ final class Model {
 
   final TypeName generatedClass;
   final TypeElement sourceClassElement;
+  final TypeName sourceClass;
   final List<Property> properties;
-  final ClassName simpleBuilderClass;
-  final ClassName refTrackingBuilderClass;
+  final TypeName simpleBuilderClass;
+  private final ClassName refTrackingBuilderClass;
 
   private Model(TypeName generatedClass,
                 TypeElement sourceClassElement,
-                ClassName simpleBuilderClass,
+                TypeName simpleBuilderClass,
                 ClassName refTrackingBuilderClass) {
     this.generatedClass = generatedClass;
     this.sourceClassElement = sourceClassElement;
     this.properties = TypeScanner.scan(sourceClassElement);
     this.simpleBuilderClass = simpleBuilderClass;
     this.refTrackingBuilderClass = refTrackingBuilderClass;
+    this.sourceClass = TypeName.get(sourceClassElement.asType());
   }
 
   static Model create(TypeElement sourceClassElement) {
-    ClassName generatedClass = peer(TypeName.get(sourceClassElement.asType()));
-    ClassName simpleBuilderClass = generatedClass.nestedClass("SimpleBuilder");
-    ClassName refTrackingBuilderClass =
-        generatedClass.nestedClass("RefTrackingBuilder");
+    TypeName sourceClass = TypeName.get(sourceClassElement.asType());
+    TypeName generatedClass = peer(sourceClass);
+    TypeName simpleBuilderClass = nestedClass(generatedClass, "SimpleBuilder");
+    ClassName optionalRefTrackingBuilderClass =
+        typeArguments(generatedClass).isEmpty() ?
+            rawType(generatedClass).nestedClass("RefTrackingBuilder") :
+            null;
 
     return new Model(generatedClass,
-        sourceClassElement, simpleBuilderClass, refTrackingBuilderClass);
+        sourceClassElement, simpleBuilderClass, optionalRefTrackingBuilderClass);
   }
 
-  private static ClassName peer(TypeName type) {
+  private static TypeName peer(TypeName type) {
     String name = String.join("_", rawType(type).simpleNames()) + SUFFIX;
-    return rawType(type).topLevelClassName().peerClass(name);
+    ClassName className = rawType(type).topLevelClassName().peerClass(name);
+    return withTypevars(className, typeArguments(type));
+  }
+
+  private static TypeName withTypevars(ClassName className, List<TypeName> typevars) {
+    if (typevars.isEmpty()) {
+      return className;
+    }
+    return ParameterizedTypeName.get(className, typevars.toArray(
+        new TypeName[typevars.size()]));
+  }
+
+  private static TypeName nestedClass(TypeName generatedClass, String name) {
+    return withTypevars(rawType(generatedClass).nestedClass(name),
+        typeArguments(generatedClass));
   }
 
   private boolean isPublic() {
@@ -67,7 +90,24 @@ final class Model {
         .collect(toList());
   }
 
-  ClassName sourceClass() {
-    return rawType(TypeName.get(sourceClassElement.asType()));
+  private static List<TypeName> typeArguments(TypeName typeName) {
+    if (typeName instanceof ParameterizedTypeName) {
+      return ((ParameterizedTypeName) typeName).typeArguments;
+    }
+    return Collections.emptyList();
+  }
+
+  Optional<ClassName> optionalRefTrackingBuilderClass() {
+    return Optional.ofNullable(refTrackingBuilderClass);
+  }
+
+  String cacheWarning() {
+    return "Caching not implemented: " +
+        rawType(sourceClass).simpleName() +
+        "<" +
+        typevars().stream()
+            .map(TypeVariableName::toString)
+            .collect(joining(", ")) +
+        "> has type parameters";
   }
 }

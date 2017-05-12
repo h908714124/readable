@@ -41,7 +41,7 @@ final class PerThreadFactory {
   }
 
   private MethodSpec builderMethod() {
-    ParameterSpec input = ParameterSpec.builder(model.sourceClass(), "input").build();
+    ParameterSpec input = ParameterSpec.builder(model.sourceClass, "input").build();
     CodeBlock.Builder block = CodeBlock.builder()
         .beginControlFlow("if (this.$N == null || this.$N.inUse)", builder, builder)
         .addStatement("this.$N = new $T()", builder, refTrackingBuilder.refTrackingBuilderClass)
@@ -53,6 +53,16 @@ final class PerThreadFactory {
         .addParameter(input)
         .addCode(block.build())
         .returns(model.generatedClass)
+        .build();
+  }
+
+  static TypeSpec createStub(Model model) {
+    return TypeSpec.classBuilder(RefTrackingBuilder.perThreadFactoryClass(model))
+        .addMethod(constructorBuilder()
+            .addStatement("throw new $T(\n$S)", UnsupportedOperationException.class,
+                model.cacheWarning())
+            .build())
+        .addModifiers(STATIC, FINAL)
         .build();
   }
 }
