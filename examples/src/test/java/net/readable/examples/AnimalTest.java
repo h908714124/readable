@@ -1,10 +1,10 @@
 package net.readable.examples;
 
+import org.junit.Test;
+
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.sameInstance;
-import static org.junit.Assert.*;
-
-import org.junit.Test;
+import static org.junit.Assert.assertThat;
 
 public class AnimalTest {
 
@@ -18,10 +18,10 @@ public class AnimalTest {
         .name("Horse")
         .good(true)
         .build();
-    assertThat(spiderPig.getName(), is("Spider-Pig"));
-    assertThat(spiderPig.isGood(), is(false));
-    assertThat(horse.getName(), is("Horse"));
-    assertThat(horse.isGood(), is(true));
+    assertThat(spiderPig.name, is("Spider-Pig"));
+    assertThat(spiderPig.good, is(false));
+    assertThat(horse.name, is("Horse"));
+    assertThat(horse.good, is(true));
   }
 
   @Test
@@ -32,11 +32,11 @@ public class AnimalTest {
         .name(spiderPig.toBuilder()
             .name("Horse")
             .good(false)
-            .build().getName())
+            .build().name)
         .build();
-    assertThat(horse.getName(), is("Horse"));
+    assertThat(horse.name, is("Horse"));
     assertThat("nested builder calls leads to incorrect results",
-        horse.isGood(), is(true));
+        horse.good, is(true));
   }
 
   @Test
@@ -46,8 +46,8 @@ public class AnimalTest {
     Animal badger = builder_1.name("Badger").build();
     Animal_Builder builder_2 = spiderPig.toBuilder();
     Animal snake = builder_2.name("Snake").build();
-    assertThat(badger.getName(), is("Badger"));
-    assertThat(snake.getName(), is("Snake"));
+    assertThat(badger.name, is("Badger"));
+    assertThat(snake.name, is("Snake"));
     assertThat("builders are not reused",
         builder_1, sameInstance(builder_2));
   }

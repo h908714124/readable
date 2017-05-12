@@ -2,6 +2,7 @@ package net.readable.compiler;
 
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementVisitor;
+import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.ErrorType;
@@ -10,6 +11,8 @@ import javax.lang.model.type.TypeVariable;
 import javax.lang.model.type.TypeVisitor;
 import javax.lang.model.util.SimpleElementVisitor6;
 import javax.lang.model.util.SimpleTypeVisitor6;
+
+import static javax.lang.model.element.ElementKind.PACKAGE;
 
 final class LessTypes {
 
@@ -57,4 +60,10 @@ final class LessTypes {
     return element.accept(TYPE_ELEMENT_VISITOR, null);
   }
 
+  static PackageElement getPackage(Element element) {
+    while (element.getKind() != PACKAGE) {
+      element = element.getEnclosingElement();
+    }
+    return (PackageElement) element;
+  }
 }

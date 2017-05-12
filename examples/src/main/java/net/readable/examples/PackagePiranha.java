@@ -10,7 +10,7 @@ final class PackagePiranha {
   PackagePiranha(boolean foo) {
     this.foo = foo;
   }
-  
+
   boolean isFoo() {
     return foo;
   }

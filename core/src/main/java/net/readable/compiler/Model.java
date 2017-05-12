@@ -30,7 +30,7 @@ final class Model {
                 ClassName refTrackingBuilderClass) {
     this.generatedClass = generatedClass;
     this.sourceClassElement = sourceClassElement;
-    this.properties = MethodScanner.scan(sourceClassElement);
+    this.properties = TypeScanner.scan(sourceClassElement);
     this.simpleBuilderClass = simpleBuilderClass;
     this.refTrackingBuilderClass = refTrackingBuilderClass;
   }

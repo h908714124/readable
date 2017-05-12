@@ -15,14 +15,12 @@ final class Property {
   private final ExecutableElement executableElement;
   private final VariableElement field;
 
-  private Property(ExecutableElement executableElement, VariableElement field) {
-    if (executableElement != null &&
-        !checkExecutableElement(executableElement)) {
-      throw new AssertionError();
-    }
-    if (field != null && !checkField(field)) {
-      throw new AssertionError();
-    }
+  private final Signature signature;
+
+  private Property(ExecutableElement executableElement,
+                   VariableElement field,
+                   Signature signature) {
+    this.signature = signature;
     this.executableElement = executableElement;
     this.field = field;
   }
@@ -38,19 +36,26 @@ final class Property {
     return !field.getModifiers().contains(PRIVATE);
   }
 
-  static Property create(ExecutableElement executableElement) {
-    return new Property(executableElement, null);
+  static Property create(
+      Signature signature,
+      ExecutableElement executableElement) {
+    if (!checkExecutableElement(executableElement)) {
+      throw new AssertionError();
+    }
+    return new Property(executableElement, null, signature);
   }
 
-  static Property create(VariableElement field) {
-    return new Property(null, field);
+  static Property create(
+      Signature signature,
+      VariableElement field) {
+    if (!checkField(field)) {
+      throw new AssertionError();
+    }
+    return new Property(null, field, signature);
   }
 
   TypeName type() {
-    if (executableElement != null) {
-      return TypeName.get(executableElement.getReturnType());
-    }
-    return TypeName.get(field.asType());
+    return signature.propertyType;
   }
 
   String access() {
@@ -67,6 +72,6 @@ final class Property {
   }
 
   String propertyName() {
-    throw new UnsupportedOperationException("not yet");
+    return signature.propertyName;
   }
 }
