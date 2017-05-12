@@ -27,8 +27,7 @@ final class TypeScanner {
     if (sourceClassElement.getEnclosingElement() != null &&
         sourceClassElement.getEnclosingElement().getKind() == ElementKind.CLASS &&
         !sourceClassElement.getModifiers().contains(Modifier.STATIC)) {
-      throw new ValidationException("The inner class must be static " +
-          sourceClassElement.getEnclosingElement(), sourceClassElement);
+      throw new ValidationException("The inner class must be static", sourceClassElement);
     }
     ExecutableElement constructor = constructor(sourceClassElement);
     return getters(sourceClassElement, constructor);
@@ -44,26 +43,18 @@ final class TypeScanner {
       return constructors.get(0);
     }
     if (constructors.isEmpty()) {
-      if (sourceClassElement.getModifiers().contains(Modifier.ABSTRACT)) {
-        throw new ValidationException("No non-private constructor found", sourceClassElement);
-      }
+      throw new ValidationException("No non-private constructor found", sourceClassElement);
     }
-    if (constructors.size() > 1) {
-      constructors = constructors.stream()
-          .filter(constructor -> constructor.getAnnotation(Readable.Constructor.class) != null)
-          .collect(Collectors.toList());
-    }
+    constructors = constructors.stream()
+        .filter(constructor -> constructor.getAnnotation(Readable.Constructor.class) != null)
+        .collect(Collectors.toList());
     if (constructors.isEmpty()) {
-      if (sourceClassElement.getModifiers().contains(Modifier.ABSTRACT)) {
-        throw new ValidationException("Use @Readable.Constructor " +
-            "to mark a constructor", sourceClassElement);
-      }
+      throw new ValidationException("Use @Readable.Constructor " +
+          "to mark a constructor", sourceClassElement);
     }
     if (constructors.size() > 1) {
-      if (sourceClassElement.getModifiers().contains(Modifier.ABSTRACT)) {
-        throw new ValidationException("Only one @Readable.Constructor " +
-            "annotation is allowed per class", sourceClassElement);
-      }
+      throw new ValidationException("Only one @Readable.Constructor " +
+          "annotation is allowed per class", sourceClassElement);
     }
     return constructors.get(0);
   }
