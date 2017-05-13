@@ -9,6 +9,8 @@ import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 
+import java.util.Optional;
+
 import static javax.lang.model.element.Modifier.FINAL;
 import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.STATIC;
@@ -62,7 +64,13 @@ final class RefTrackingBuilder {
         .addStatement("$T $N = $T.$N(this)", model.sourceClass, result,
             rawType(model.generatedClass), staticBuildMethod);
     for (Property property : model.properties) {
-      if (property.type() instanceof ClassName ||
+      if (property.optionalInfo().isPresent()) {
+        property.optionalInfo()
+            .filter(OptionalInfo::isOptional)
+            .ifPresent(optionalInfo ->
+                builder.addStatement("this.$L($T.empty())",
+                    property.propertyName(), Optional.class));
+      } else if (property.type() instanceof ClassName ||
           property.type() instanceof ParameterizedTypeName) {
         builder.addStatement("this.$L(null)",
             property.propertyName());

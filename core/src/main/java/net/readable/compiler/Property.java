@@ -5,6 +5,7 @@ import com.squareup.javapoet.TypeName;
 
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.VariableElement;
+import java.util.Optional;
 
 import static javax.lang.model.element.Modifier.ABSTRACT;
 import static javax.lang.model.element.Modifier.PRIVATE;
@@ -16,6 +17,7 @@ final class Property {
   private final VariableElement field;
 
   private final Signature signature;
+  private final OptionalInfo optionalInfo;
 
   private Property(ExecutableElement executableElement,
                    VariableElement field,
@@ -23,6 +25,7 @@ final class Property {
     this.signature = signature;
     this.executableElement = executableElement;
     this.field = field;
+    this.optionalInfo = OptionalInfo.create(signature.propertyType);
   }
 
   private static boolean checkExecutableElement(ExecutableElement executableElement) {
@@ -65,13 +68,25 @@ final class Property {
     return field.getSimpleName().toString();
   }
 
+  String propertyName() {
+    return signature.propertyName;
+  }
+
   FieldSpec.Builder asField() {
     return FieldSpec.builder(type(),
         propertyName())
         .addModifiers(PRIVATE);
   }
 
-  String propertyName() {
-    return signature.propertyName;
+  FieldSpec asInitializedField() {
+    FieldSpec.Builder fieldBuilder = asField();
+    if (optionalInfo != null) {
+      fieldBuilder.initializer("$T.empty()", optionalInfo.wrapper);
+    }
+    return fieldBuilder.build();
+  }
+
+  Optional<OptionalInfo> optionalInfo() {
+    return Optional.ofNullable(optionalInfo);
   }
 }

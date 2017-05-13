@@ -54,18 +54,16 @@ final class Analyser {
       builder.addType(PerThreadFactory.createStub(model));
     }
     for (Property property : model.properties) {
-      OptionalInfo optionalInfo = OptionalInfo.create(property.type());
-      FieldSpec field = fieldOf(property, optionalInfo);
+      FieldSpec field = property.asInitializedField();
       ParameterSpec p = ParameterSpec.builder(property.type(),
           property.propertyName()).build();
       builder.addField(field);
       builder.addMethod(setterMethod(property, field, p));
-      if (optionalInfo != null &&
-          !optionalInfo.isDoubleOptional()) {
-        builder.addMethod(optionalSetterMethod(property, optionalInfo, field,
-            ParameterSpec.builder(optionalInfo.wrapped,
-                property.propertyName()).build()));
-      }
+      property.optionalInfo()
+          .filter(OptionalInfo::isRegular)
+          .ifPresent(optionalInfo ->
+              builder.addMethod(optionalSetterMethod(property,
+                  optionalInfo)));
     }
     return builder.addModifiers(model.maybePublic())
         .addModifiers(ABSTRACT)
@@ -91,10 +89,20 @@ final class Analyser {
         .build();
   }
 
-  private MethodSpec optionalSetterMethod(Property property, OptionalInfo optionalInfo, FieldSpec f, ParameterSpec p) {
+  private MethodSpec optionalSetterMethod(
+      Property property, OptionalInfo optionalInfo) {
+    ParameterSpec p = ParameterSpec.builder(optionalInfo.wrapped,
+        property.propertyName()).build();
+    FieldSpec f = property.asField().build();
+    CodeBlock.Builder block = CodeBlock.builder();
+    if (optionalInfo.isOptional()) {
+      block.addStatement("this.$N = $T.ofNullable($N)", f, optionalInfo.wrapper, p);
+    } else {
+      block.addStatement("this.$N = $T.of($N)", f, optionalInfo.wrapper, p);
+    }
     return MethodSpec.methodBuilder(
         property.propertyName())
-        .addStatement("this.$N = $T.of($N)", f, optionalInfo.wrapper, p)
+        .addCode(block.build())
         .addStatement("return this")
         .addParameter(p)
         .addModifiers(FINAL)
@@ -191,13 +199,5 @@ final class Analyser {
           .addModifiers(PRIVATE)
           .build();
     }
-  }
-
-  private static FieldSpec fieldOf(Property property, OptionalInfo optionalInfo) {
-    FieldSpec.Builder fieldBuilder = property.asField();
-    if (optionalInfo != null) {
-      fieldBuilder.initializer("$T.empty()", optionalInfo.wrapper);
-    }
-    return fieldBuilder.build();
   }
 }

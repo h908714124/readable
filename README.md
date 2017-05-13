@@ -12,7 +12,7 @@ See also [auto-builder](https://github.com/h908714124/auto-builder) and
 <dependency>
   <groupId>com.github.h908714124</groupId>
   <artifactId>readable</artifactId>
-  <version>1.0</version>
+  <version>1.1</version>
   <scope>provided</scope>
 </dependency>
 ````
