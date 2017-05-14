@@ -9,7 +9,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static javax.lang.model.element.Modifier.PRIVATE;
-import static javax.lang.model.element.Modifier.PROTECTED;
 import static javax.lang.model.element.Modifier.PUBLIC;
 import static javax.lang.model.element.Modifier.STATIC;
 import static javax.lang.model.util.ElementFilter.fieldsIn;
@@ -48,7 +47,6 @@ final class Fields {
         .filter(field -> {
           PackageElement fieldPackage = getPackage(field);
           return fieldPackage.equals(packageElement) ||
-              field.getModifiers().contains(PROTECTED) ||
               field.getModifiers().contains(PUBLIC);
         })
         .forEach(field -> {

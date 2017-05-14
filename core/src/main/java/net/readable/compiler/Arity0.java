@@ -1,7 +1,6 @@
 package net.readable.compiler;
 
 import javax.lang.model.element.ExecutableElement;
-import javax.lang.model.element.Modifier;
 import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeKind;
@@ -12,7 +11,6 @@ import java.util.Map;
 import static javax.lang.model.element.ElementKind.METHOD;
 import static javax.lang.model.element.Modifier.ABSTRACT;
 import static javax.lang.model.element.Modifier.PRIVATE;
-import static javax.lang.model.element.Modifier.PROTECTED;
 import static javax.lang.model.element.Modifier.PUBLIC;
 import static javax.lang.model.element.Modifier.STATIC;
 import static javax.lang.model.type.TypeKind.VOID;
@@ -52,7 +50,6 @@ final class Arity0 {
         .filter((ExecutableElement method) -> {
           PackageElement methodPackage = getPackage(method);
           return methodPackage.equals(packageElement) ||
-              method.getModifiers().contains(PROTECTED) ||
               method.getModifiers().contains(PUBLIC);
         })
         .filter(method -> method.getParameters().isEmpty())

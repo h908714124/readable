@@ -64,7 +64,8 @@ For each constructor parameter `T myParam`, where `T` is a type, there must be e
 * OR, if `T` is `boolean`, a non-private method `boolean isMyParam()`.
 
 The first match in this order wins, and will be used to initialize the builder 
-in `Animal_Builder.builder(Animal input)`.
+in `Animal_Builder.builder(Animal input)`. If the field or method is inherited from
+a class in a different package, it must also be `public`.
 
 The following examples are all valid.
 
@@ -157,7 +158,7 @@ Have fun!
 <dependency>
   <groupId>com.github.h908714124</groupId>
   <artifactId>readable</artifactId>
-  <version>1.1</version>
+  <version>1.2</version>
   <scope>provided</scope>
 </dependency>
 ````

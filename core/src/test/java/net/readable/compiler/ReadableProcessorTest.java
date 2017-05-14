@@ -14,13 +14,13 @@ import static java.util.Collections.singletonList;
 public class ReadableProcessorTest {
 
   @Test
-  public void inheritedFieldNotVisible() throws Exception {
+  public void inheritedFieldIsPackagePrivate() throws Exception {
     List<String> animal = asList(
         "package animal;",
         "",
-        "class Animal {",
+        "public class Animal {",
         "  final String name;",
-        "  Animal(String name) {",
+        "  protected Animal(String name) {",
         "    this.name = name;",
         "  }",
         "}");
@@ -41,6 +41,163 @@ public class ReadableProcessorTest {
         .processedWith(new ReadableProcessor())
         .failsToCompile()
         .withErrorContaining("missing readable property");
+  }
+
+  @Test
+  public void inheritedFieldIsProtected() throws Exception {
+    List<String> animal = asList(
+        "package animal;",
+        "",
+        "public class Animal {",
+        "  protected final String name;",
+        "  protected Animal(String name) {",
+        "    this.name = name;",
+        "  }",
+        "}");
+    List<String> horse = asList(
+        "package horse;",
+        "import animal.Animal;",
+        "import net.readable.Readable;",
+        "",
+        "@Readable",
+        "class Horse extends Animal {",
+        "  Horse(String name) {",
+        "    super(name);",
+        "  }",
+        "}");
+    JavaFileObject animalFile = forSourceLines("animal.Animal", animal);
+    JavaFileObject horseFile = forSourceLines("horse.Horse", horse);
+    assertAbout(javaSources()).that(asList(animalFile, horseFile))
+        .processedWith(new ReadableProcessor())
+        .failsToCompile()
+        .withErrorContaining("missing readable property");
+  }
+
+  @Test
+  public void inheritedFieldIsPublic() throws Exception {
+    List<String> animal = asList(
+        "package animal;",
+        "",
+        "public class Animal {",
+        "  public final String name;",
+        "  protected Animal(String name) {",
+        "    this.name = name;",
+        "  }",
+        "}");
+    List<String> horse = asList(
+        "package horse;",
+        "import animal.Animal;",
+        "import net.readable.Readable;",
+        "",
+        "@Readable",
+        "class Horse extends Animal {",
+        "  Horse(String name) {",
+        "    super(name);",
+        "  }",
+        "}");
+    JavaFileObject animalFile = forSourceLines("animal.Animal", animal);
+    JavaFileObject horseFile = forSourceLines("horse.Horse", horse);
+    assertAbout(javaSources()).that(asList(animalFile, horseFile))
+        .processedWith(new ReadableProcessor())
+        .compilesWithoutError();
+  }
+
+  @Test
+  public void inheritedMethodIsPackagePrivate() throws Exception {
+    List<String> animal = asList(
+        "package animal;",
+        "",
+        "public class Animal {",
+        "  private final String name;",
+        "  protected Animal(String name) {",
+        "    this.name = name;",
+        "  }",
+        "  String getName() {",
+        "    return name;",
+        "  }",
+        "}");
+    List<String> horse = asList(
+        "package horse;",
+        "import animal.Animal;",
+        "import net.readable.Readable;",
+        "",
+        "@Readable",
+        "class Horse extends Animal {",
+        "  Horse(String name) {",
+        "    super(name);",
+        "  }",
+        "}");
+    JavaFileObject animalFile = forSourceLines("animal.Animal", animal);
+    JavaFileObject horseFile = forSourceLines("horse.Horse", horse);
+    assertAbout(javaSources()).that(asList(animalFile, horseFile))
+        .processedWith(new ReadableProcessor())
+        .failsToCompile()
+        .withErrorContaining("missing readable property");
+  }
+
+  @Test
+  public void inheritedMethodIsProtected() throws Exception {
+    List<String> animal = asList(
+        "package animal;",
+        "",
+        "public class Animal {",
+        "  private final String name;",
+        "  protected Animal(String name) {",
+        "    this.name = name;",
+        "  }",
+        "  String getName() {",
+        "    return name;",
+        "  }",
+        "}");
+    List<String> horse = asList(
+        "package horse;",
+        "import animal.Animal;",
+        "import net.readable.Readable;",
+        "",
+        "@Readable",
+        "class Horse extends Animal {",
+        "  Horse(String name) {",
+        "    super(name);",
+        "  }",
+        "}");
+    JavaFileObject animalFile = forSourceLines("animal.Animal", animal);
+    JavaFileObject horseFile = forSourceLines("horse.Horse", horse);
+    assertAbout(javaSources()).that(asList(animalFile, horseFile))
+        .processedWith(new ReadableProcessor())
+        .failsToCompile()
+        .withErrorContaining("missing readable property");
+  }
+
+  @Test
+  public void inheritedMethodIsPublic() throws Exception {
+    List<String> animal = asList(
+        "package animal;",
+        "",
+        "public class Animal {",
+        "  private final String name;",
+        "  protected Animal(String name) {",
+        "    this.name = name;",
+        "  }",
+        "  public String getName() {",
+        "    return name;",
+        "  }",
+        "}");
+    List<String> horse = asList(
+        "package horse;",
+        "import animal.Animal;",
+        "import net.readable.Readable;",
+        "",
+        "@Readable",
+        "class Horse extends Animal {",
+        "  Horse(String name) {",
+        "    super(name);",
+        "  }",
+        "}");
+    JavaFileObject animalFile = forSourceLines("animal.Animal", animal);
+    JavaFileObject horseFile = forSourceLines("horse.Horse", horse);
+    assertAbout(javaSources()).that(asList(animalFile, horseFile))
+        .processedWith(new ReadableProcessor())
+        .compilesWithoutError();
   }
 
   @Test
