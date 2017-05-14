@@ -8,7 +8,6 @@ import javax.lang.model.type.TypeMirror;
 import java.util.HashMap;
 import java.util.Map;
 
-import static javax.lang.model.element.ElementKind.METHOD;
 import static javax.lang.model.element.Modifier.ABSTRACT;
 import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.PUBLIC;
@@ -21,48 +20,39 @@ import static net.readable.compiler.LessTypes.getPackage;
 final class Arity0 {
 
   static Map<Signature, ExecutableElement> parameterlessMethods(
-      TypeElement type) {
-    PackageElement packageElement = getPackage(type);
+      TypeElement sourceTypeElement) {
+    PackageElement ourPackage = getPackage(sourceTypeElement);
     Map<Signature, ExecutableElement> methods = new HashMap<>();
-    addFromSuperclass(type, methods, packageElement);
+    addFromSuperclass(sourceTypeElement, methods, ourPackage);
     return methods;
   }
 
   private static void addFromSuperclass(
       TypeElement type, Map<Signature,
       ExecutableElement> methods,
-      PackageElement packageElement) {
-    addEnclosedMethods(type, methods, packageElement);
+      PackageElement ourPackage) {
+    addEnclosedMethods(type, methods, ourPackage);
     TypeMirror superclass = type.getSuperclass();
     if (superclass.getKind() != TypeKind.DECLARED) {
       return;
     }
-    addFromSuperclass(asTypeElement(superclass), methods,
-        packageElement);
+    addFromSuperclass(asTypeElement(superclass), methods, ourPackage);
   }
 
   private static void addEnclosedMethods(
       TypeElement type,
       Map<Signature, ExecutableElement> methods,
-      PackageElement packageElement) {
+      PackageElement ourPackage) {
     methodsIn(type.getEnclosedElements())
         .stream()
-        .filter((ExecutableElement method) -> {
-          PackageElement methodPackage = getPackage(method);
-          return methodPackage.equals(packageElement) ||
-              method.getModifiers().contains(PUBLIC);
-        })
+        .filter(method -> !method.getModifiers().contains(ABSTRACT))
+        .filter(method -> !method.getModifiers().contains(STATIC))
+        .filter(method -> !method.getModifiers().contains(PRIVATE))
         .filter(method -> method.getParameters().isEmpty())
         .filter(method -> method.getReturnType().getKind() != VOID)
-        .forEach(method -> {
-          if (method.getKind() == METHOD
-              && !method.getModifiers().contains(STATIC)
-              && !method.getModifiers().contains(ABSTRACT)
-              && !method.getModifiers().contains(PRIVATE)) {
-            Signature signature = Signature.create(method);
-            methods.computeIfAbsent(signature,
-                __ -> method);
-          }
-        });
+        .filter(method -> method.getModifiers().contains(PUBLIC) ||
+            getPackage(method).equals(ourPackage))
+        .forEach(method ->
+            methods.putIfAbsent(Signature.create(method), method));
   }
 }
