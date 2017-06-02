@@ -1,19 +1,18 @@
 package net.readable.compiler;
 
-import net.readable.Readable;
+import static net.readable.compiler.Arity0.parameterlessMethods;
+import static net.readable.compiler.LessTypes.asTypeElement;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.util.ElementFilter;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-
-import static net.readable.compiler.Arity0.parameterlessMethods;
 
 final class TypeScanner {
 
@@ -50,14 +49,18 @@ final class TypeScanner {
       throw new ValidationException("No non-private constructor found", sourceClassElement);
     }
     constructors = constructors.stream()
-        .filter(constructor -> constructor.getAnnotation(Readable.Constructor.class) != null)
+        .filter(constructor ->
+            constructor.getAnnotationMirrors().stream().anyMatch(mirror ->
+                asTypeElement(mirror.getAnnotationType())
+                    .getQualifiedName().toString()
+                    .endsWith(".Constructor")))
         .collect(Collectors.toList());
     if (constructors.isEmpty()) {
       throw new ValidationException("Use @Readable.Constructor " +
-          "to mark a constructor", sourceClassElement);
+          "to tag a constructor", sourceClassElement);
     }
     if (constructors.size() > 1) {
-      throw new ValidationException("Only one @Readable.Constructor " +
+      throw new ValidationException("Only one @Constructor " +
           "annotation is allowed per class", sourceClassElement);
     }
     return constructors.get(0);
