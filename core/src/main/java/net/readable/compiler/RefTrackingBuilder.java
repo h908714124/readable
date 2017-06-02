@@ -9,26 +9,32 @@ import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 
+import java.util.List;
 import java.util.Optional;
 
 import static javax.lang.model.element.Modifier.FINAL;
 import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.STATIC;
+import static net.readable.compiler.ParaParameter.GET_PROPERTY;
+import static net.readable.compiler.ParaParameter.OPTIONAL_INFO;
 import static net.readable.compiler.ReadableProcessor.rawType;
 
 final class RefTrackingBuilder {
 
   private final Model model;
+  private final List<ParaParameter> properties;
   private final MethodSpec staticBuildMethod;
   final FieldSpec inUse;
   final ClassName refTrackingBuilderClass;
   final ClassName perThreadFactoryClass;
 
-  private RefTrackingBuilder(Model model,
-                             MethodSpec staticBuildMethod,
-                             ClassName refTrackingBuilderClass,
-                             ClassName perThreadFactoryClass) {
+  private RefTrackingBuilder(
+      Model model,
+      List<ParaParameter> properties, MethodSpec staticBuildMethod,
+      ClassName refTrackingBuilderClass,
+      ClassName perThreadFactoryClass) {
     this.model = model;
+    this.properties = properties;
     this.staticBuildMethod = staticBuildMethod;
     this.refTrackingBuilderClass = refTrackingBuilderClass;
     this.perThreadFactoryClass = perThreadFactoryClass;
@@ -40,11 +46,13 @@ final class RefTrackingBuilder {
         .nestedClass("PerThreadFactory");
   }
 
-  static RefTrackingBuilder create(Model model,
-                                   MethodSpec staticBuildMethod) {
+  static RefTrackingBuilder create(
+      Model model,
+      List<ParaParameter> properties,
+      MethodSpec staticBuildMethod) {
     return model.optionalRefTrackingBuilderClass().map(refTrackingBuilderClass -> {
       ClassName perThreadFactoryClass = perThreadFactoryClass(model);
-      return new RefTrackingBuilder(model, staticBuildMethod,
+      return new RefTrackingBuilder(model, properties, staticBuildMethod,
           refTrackingBuilderClass, perThreadFactoryClass);
     }).orElse(null);
   }
@@ -63,17 +71,17 @@ final class RefTrackingBuilder {
     CodeBlock.Builder builder = CodeBlock.builder()
         .addStatement("$T $N = $T.$N(this)", model.sourceClass, result,
             rawType(model.generatedClass), staticBuildMethod);
-    for (Property property : model.properties) {
-      if (property.optionalInfo().isPresent()) {
-        property.optionalInfo()
-            .filter(OptionalInfo::isOptional)
-            .ifPresent(optionalInfo ->
+    for (ParaParameter property : properties) {
+      if (OPTIONAL_INFO.apply(property).isPresent()) {
+        OPTIONAL_INFO.apply(property)
+            .filter(Optionalish::isOptional)
+            .ifPresent(optionalish ->
                 builder.addStatement("this.$L($T.empty())",
-                    property.propertyName(), Optional.class));
-      } else if (property.type() instanceof ClassName ||
-          property.type() instanceof ParameterizedTypeName) {
+                    GET_PROPERTY.apply(property).propertyName(), Optional.class));
+      } else if (GET_PROPERTY.apply(property).type() instanceof ClassName ||
+          GET_PROPERTY.apply(property).type() instanceof ParameterizedTypeName) {
         builder.addStatement("this.$L(null)",
-            property.propertyName());
+            GET_PROPERTY.apply(property).propertyName());
       }
     }
     builder.addStatement("this.$N = $L", inUse, false)

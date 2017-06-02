@@ -9,27 +9,33 @@ import com.squareup.javapoet.TypeSpec;
 
 import javax.annotation.Generated;
 import java.util.Arrays;
+import java.util.List;
 
 import static java.util.Objects.requireNonNull;
 import static javax.lang.model.element.Modifier.ABSTRACT;
 import static javax.lang.model.element.Modifier.FINAL;
 import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.STATIC;
+import static net.readable.compiler.ParaParameter.AS_INITIALIZED_FIELD;
+import static net.readable.compiler.ParaParameter.GET_PROPERTY;
+import static net.readable.compiler.ParaParameter.OPTIONAL_INFO;
 import static net.readable.compiler.ReadableProcessor.rawType;
 
 final class Analyser {
 
   private final Model model;
+  private final List<ParaParameter> properties;
   private final MethodSpec initMethod;
   private final MethodSpec staticBuildMethod;
   private final RefTrackingBuilder optionalRefTrackingBuilder;
 
   private Analyser(Model model) {
+    this.properties = TypeScanner.scan(model);
+    this.initMethod = initMethod(model, properties);
+    this.staticBuildMethod = staticBuildMethod(model, properties);
     this.model = model;
-    this.initMethod = initMethod(model);
-    this.staticBuildMethod = staticBuildMethod(model);
     this.optionalRefTrackingBuilder =
-        RefTrackingBuilder.create(model, staticBuildMethod);
+        RefTrackingBuilder.create(model, properties, staticBuildMethod);
   }
 
   static Analyser create(Model model) {
@@ -53,17 +59,18 @@ final class Analyser {
     } else {
       builder.addType(PerThreadFactory.createStub(model));
     }
-    for (Property property : model.properties) {
-      FieldSpec field = property.asInitializedField();
-      ParameterSpec p = ParameterSpec.builder(property.type(),
-          property.propertyName()).build();
+    for (ParaParameter property : properties) {
+      FieldSpec field = AS_INITIALIZED_FIELD.apply(property);
+      ParameterSpec p = ParameterSpec.builder(GET_PROPERTY.apply(property).type(),
+          GET_PROPERTY.apply(property).propertyName()).build();
       builder.addField(field);
       builder.addMethod(setterMethod(property, field, p));
-      property.optionalInfo()
-          .filter(OptionalInfo::isRegular)
-          .ifPresent(optionalInfo ->
-              builder.addMethod(optionalSetterMethod(property,
-                  optionalInfo)));
+      OPTIONAL_INFO.apply(property)
+          .filter(Optionalish::isRegular)
+          .ifPresent(optionalish ->
+              builder.addMethod(
+                  optionalSetterMethod(property,
+                      optionalish)));
     }
     return builder.addModifiers(model.maybePublic())
         .addModifiers(ABSTRACT)
@@ -77,9 +84,9 @@ final class Analyser {
         .build();
   }
 
-  private MethodSpec setterMethod(Property property, FieldSpec f, ParameterSpec p) {
+  private MethodSpec setterMethod(ParaParameter property, FieldSpec f, ParameterSpec p) {
     return MethodSpec.methodBuilder(
-        property.propertyName())
+        GET_PROPERTY.apply(property).propertyName())
         .addStatement("this.$N = $N", f, p)
         .addStatement("return this")
         .addParameter(p)
@@ -90,18 +97,18 @@ final class Analyser {
   }
 
   private MethodSpec optionalSetterMethod(
-      Property property, OptionalInfo optionalInfo) {
-    ParameterSpec p = ParameterSpec.builder(optionalInfo.wrapped,
-        property.propertyName()).build();
-    FieldSpec f = property.asField().build();
+      ParaParameter property, Optionalish optionalish) {
+    ParameterSpec p = ParameterSpec.builder(optionalish.wrapped,
+        GET_PROPERTY.apply(property).propertyName()).build();
+    FieldSpec f = GET_PROPERTY.apply(property).asField().build();
     CodeBlock.Builder block = CodeBlock.builder();
-    if (optionalInfo.isOptional()) {
-      block.addStatement("this.$N = $T.ofNullable($N)", f, optionalInfo.wrapper, p);
+    if (optionalish.isOptional()) {
+      block.addStatement("this.$N = $T.ofNullable($N)", f, optionalish.wrapper, p);
     } else {
-      block.addStatement("this.$N = $T.of($N)", f, optionalInfo.wrapper, p);
+      block.addStatement("this.$N = $T.of($N)", f, optionalish.wrapper, p);
     }
     return MethodSpec.methodBuilder(
-        property.propertyName())
+        GET_PROPERTY.apply(property).propertyName())
         .addCode(block.build())
         .addStatement("return this")
         .addParameter(p)
@@ -136,14 +143,15 @@ final class Analyser {
         .build();
   }
 
-  private static MethodSpec initMethod(Model model) {
+  private static MethodSpec initMethod(
+      Model model, List<ParaParameter> properties) {
     ParameterSpec builder = ParameterSpec.builder(model.generatedClass,
         "builder").build();
     ParameterSpec input = ParameterSpec.builder(model.sourceClass, "input").build();
     CodeBlock.Builder block = CodeBlock.builder();
-    for (Property accessorPair : model.properties) {
-      block.addStatement("$N.$N($N.$L)", builder, accessorPair.propertyName(),
-          input, accessorPair.access());
+    for (ParaParameter property : properties) {
+      block.addStatement("$N.$N($N.$L)", builder, GET_PROPERTY.apply(property).propertyName(),
+          input, GET_PROPERTY.apply(property).access());
     }
     return MethodSpec.methodBuilder("init")
         .addCode(block.build())
@@ -153,13 +161,14 @@ final class Analyser {
         .build();
   }
 
-  private static MethodSpec staticBuildMethod(Model model) {
+  private static MethodSpec staticBuildMethod(
+      Model model, List<ParaParameter> properties) {
     ParameterSpec builder = ParameterSpec.builder(model.generatedClass,
         "builder").build();
     CodeBlock.Builder block = CodeBlock.builder();
-    for (int i = 0; i < model.properties.size(); i++) {
-      Property property = model.properties.get(i);
-      FieldSpec f = property.asField().build();
+    for (int i = 0; i < properties.size(); i++) {
+      ParaParameter property = properties.get(i);
+      FieldSpec f = GET_PROPERTY.apply(property).asField().build();
       if (i > 0) {
         block.add(",");
       }

@@ -25,23 +25,27 @@ final class Model {
   final TypeName generatedClass;
   final TypeElement sourceClassElement;
   final TypeName sourceClass;
-  final List<Property> properties;
   final TypeName simpleBuilderClass;
   private final ClassName refTrackingBuilderClass;
+  final Util util;
 
-  private Model(TypeName generatedClass,
-                TypeElement sourceClassElement,
-                TypeName simpleBuilderClass,
-                ClassName refTrackingBuilderClass) {
+  private Model(
+      TypeName generatedClass,
+      TypeElement sourceClassElement,
+      TypeName simpleBuilderClass,
+      ClassName refTrackingBuilderClass,
+      Util util) {
     this.generatedClass = generatedClass;
     this.sourceClassElement = sourceClassElement;
-    this.properties = TypeScanner.scan(sourceClassElement);
     this.simpleBuilderClass = simpleBuilderClass;
     this.refTrackingBuilderClass = refTrackingBuilderClass;
     this.sourceClass = TypeName.get(sourceClassElement.asType());
+    this.util = util;
   }
 
-  static Model create(TypeElement sourceClassElement) {
+  static Model create(
+      TypeElement sourceClassElement,
+      Util util) {
     TypeName sourceClass = TypeName.get(sourceClassElement.asType());
     TypeName generatedClass = peer(sourceClass);
     TypeName simpleBuilderClass = nestedClass(generatedClass, "SimpleBuilder");
@@ -51,7 +55,8 @@ final class Model {
             null;
 
     return new Model(generatedClass,
-        sourceClassElement, simpleBuilderClass, optionalRefTrackingBuilderClass);
+        sourceClassElement, simpleBuilderClass,
+        optionalRefTrackingBuilderClass, util);
   }
 
   private static TypeName peer(TypeName type) {

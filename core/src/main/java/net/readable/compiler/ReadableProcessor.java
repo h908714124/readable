@@ -5,6 +5,7 @@ import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
+import com.squareup.javapoet.TypeVariableName;
 import net.readable.Readable;
 
 import javax.annotation.processing.AbstractProcessor;
@@ -16,6 +17,7 @@ import javax.tools.JavaFileObject;
 import java.io.IOException;
 import java.io.Writer;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import static javax.lang.model.util.ElementFilter.typesIn;
@@ -41,13 +43,14 @@ public final class ReadableProcessor extends AbstractProcessor {
   public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment env) {
     Set<TypeElement> typeElements =
         typesIn(env.getElementsAnnotatedWith(Readable.class));
+    Util util = new Util(processingEnv);
     for (TypeElement sourceClassElement : typeElements) {
       TypeName sourceClass = TypeName.get(sourceClassElement.asType());
       try {
         if (!done.add(sourceClass)) {
           continue;
         }
-        Model model = Model.create(sourceClassElement);
+        Model model = Model.create(sourceClassElement, util);
         TypeSpec typeSpec = Analyser.create(model).analyse();
         write(rawType(model.generatedClass), typeSpec);
       } catch (ValidationException e) {
@@ -81,6 +84,12 @@ public final class ReadableProcessor extends AbstractProcessor {
   }
 
   static ClassName rawType(TypeName typeName) {
+    if (typeName instanceof TypeVariableName) {
+      return TypeName.OBJECT;
+    }
+    if (typeName.getClass().equals(TypeName.class)) {
+      return TypeName.OBJECT;
+    }
     if (typeName instanceof ParameterizedTypeName) {
       return ((ParameterizedTypeName) typeName).rawType;
     }

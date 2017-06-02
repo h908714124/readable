@@ -17,20 +17,24 @@ import static net.readable.compiler.Arity0.parameterlessMethods;
 
 final class TypeScanner {
 
-  static List<Property> scan(TypeElement sourceClassElement) {
-    if (sourceClassElement.getModifiers().contains(Modifier.PRIVATE)) {
-      throw new ValidationException("The class may not be private", sourceClassElement);
+  static List<ParaParameter> scan(
+      Model model) {
+    if (model.sourceClassElement.getModifiers().contains(Modifier.PRIVATE)) {
+      throw new ValidationException("The class may not be private",
+          model.sourceClassElement);
     }
-    if (sourceClassElement.getModifiers().contains(Modifier.ABSTRACT)) {
-      throw new ValidationException("The class may not be abstract", sourceClassElement);
+    if (model.sourceClassElement.getModifiers().contains(Modifier.ABSTRACT)) {
+      throw new ValidationException("The class may not be abstract",
+          model.sourceClassElement);
     }
-    if (sourceClassElement.getEnclosingElement() != null &&
-        sourceClassElement.getEnclosingElement().getKind() == ElementKind.CLASS &&
-        !sourceClassElement.getModifiers().contains(Modifier.STATIC)) {
-      throw new ValidationException("The inner class must be static", sourceClassElement);
+    if (model.sourceClassElement.getEnclosingElement() != null &&
+        model.sourceClassElement.getEnclosingElement().getKind() == ElementKind.CLASS &&
+        !model.sourceClassElement.getModifiers().contains(Modifier.STATIC)) {
+      throw new ValidationException("The inner class must be static",
+          model.sourceClassElement);
     }
-    ExecutableElement constructor = constructor(sourceClassElement);
-    return getters(sourceClassElement, constructor);
+    ExecutableElement constructor = constructor(model.sourceClassElement);
+    return getters(model.sourceClassElement, constructor, model, model.util);
   }
 
   private static ExecutableElement constructor(TypeElement sourceClassElement) {
@@ -59,12 +63,15 @@ final class TypeScanner {
     return constructors.get(0);
   }
 
-  private static List<Property> getters(TypeElement sourceTypeElement,
-                                        ExecutableElement constructor) {
+  private static List<ParaParameter> getters(
+      TypeElement sourceTypeElement,
+      ExecutableElement constructor,
+      Model model,
+      Util util) {
     List<Signature> signatures = constructor.getParameters().stream()
         .map(Signature::create)
         .collect(Collectors.toList());
-    List<Property> result = new ArrayList<>(signatures.size());
+    List<ParaParameter> result = new ArrayList<>(signatures.size());
     Map<Signature, ExecutableElement> methods =
         parameterlessMethods(sourceTypeElement);
     Map<Signature, VariableElement> fields =
@@ -72,26 +79,35 @@ final class TypeScanner {
     for (Signature signature : signatures) {
       VariableElement field = fields.get(signature);
       if (field != null) {
-        result.add(Property.create(signature, field));
+        result.add(Property.create(
+            signature, field, model));
         continue;
       }
-      ExecutableElement method = methods.get(signature);
-      if (method != null) {
-        result.add(Property.create(signature, method));
-        continue;
+      ExecutableElement method = getMethod(methods, signature);
+      if (method == null) {
+        throw new ValidationException("missing readable property " +
+            signature, constructor);
       }
-      method = methods.get(signature.getterStyle());
-      if (method != null) {
-        result.add(Property.create(signature, method));
-        continue;
-      }
-      method = signature.isserStyle()
-          .map(methods::get)
-          .orElseThrow(() ->
-              new ValidationException("missing readable property " +
-                  signature, constructor));
-      result.add(Property.create(signature, method));
+      result.add(Property.create(
+          signature, method, model));
     }
     return result;
   }
+
+  private static ExecutableElement getMethod(
+      Map<Signature, ExecutableElement> methods,
+      Signature signature) {
+    ExecutableElement method = methods.get(signature);
+    if (method != null) {
+      return method;
+    }
+    method = methods.get(signature.getterStyle());
+    if (method != null) {
+      return method;
+    }
+    return signature.isserStyle()
+        .map(methods::get)
+        .orElse(null);
+  }
+
 }
