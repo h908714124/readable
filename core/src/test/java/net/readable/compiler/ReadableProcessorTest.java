@@ -222,7 +222,7 @@ public class ReadableProcessorTest {
     assertAbout(javaSources()).that(singletonList(animalFile))
         .processedWith(new ReadableProcessor())
         .failsToCompile()
-        .withErrorContaining("Use @Readable.Constructor to mark a constructor");
+        .withErrorContaining("Use @Readable.Constructor to tag a constructor");
   }
 
   @Test
@@ -249,7 +249,7 @@ public class ReadableProcessorTest {
     assertAbout(javaSources()).that(singletonList(animalFile))
         .processedWith(new ReadableProcessor())
         .failsToCompile()
-        .withErrorContaining("Only one @Readable.Constructor annotation " +
+        .withErrorContaining("Only one @Constructor annotation " +
             "is allowed per class");
   }
 

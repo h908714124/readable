@@ -14,8 +14,8 @@ import static javax.lang.model.element.Modifier.PUBLIC;
 import static javax.lang.model.element.Modifier.STATIC;
 import static javax.lang.model.type.TypeKind.VOID;
 import static javax.lang.model.util.ElementFilter.methodsIn;
-import static net.readable.compiler.LessTypes.asTypeElement;
-import static net.readable.compiler.LessTypes.getPackage;
+import static net.readable.compiler.Util.asTypeElement;
+import static net.readable.compiler.Util.getPackage;
 
 final class Arity0 {
 

@@ -6,6 +6,8 @@ import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.WildcardTypeName;
 
 import javax.annotation.processing.ProcessingEnvironment;
+import javax.lang.model.element.Element;
+import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
@@ -28,6 +30,7 @@ import static java.lang.Character.isUpperCase;
 import static java.lang.Character.toLowerCase;
 import static java.lang.Character.toUpperCase;
 import static java.util.Collections.emptySet;
+import static javax.lang.model.element.ElementKind.PACKAGE;
 import static javax.lang.model.element.Modifier.FINAL;
 
 final class Util {
@@ -211,5 +214,20 @@ final class Util {
     int i = className.lastIndexOf('.');
     return ClassName.get(className.substring(0, i),
         className.substring(i + 1));
+  }
+
+  static TypeElement asTypeElement(TypeMirror mirror) {
+    DeclaredType element = mirror.accept(AS_DECLARED, null);
+    if (element == null) {
+      throw new IllegalArgumentException("not a declared type: " + mirror);
+    }
+    return element.asElement().accept(AS_TYPE_ELEMENT, null);
+  }
+
+  static PackageElement getPackage(Element element) {
+    while (element.getKind() != PACKAGE) {
+      element = element.getEnclosingElement();
+    }
+    return (PackageElement) element;
   }
 }

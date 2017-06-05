@@ -1,18 +1,18 @@
 package net.readable.compiler;
 
-import static net.readable.compiler.Arity0.parameterlessMethods;
-import static net.readable.compiler.LessTypes.asTypeElement;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.util.ElementFilter;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import static net.readable.compiler.Arity0.parameterlessMethods;
+import static net.readable.compiler.Util.asTypeElement;
 
 final class TypeScanner {
 
