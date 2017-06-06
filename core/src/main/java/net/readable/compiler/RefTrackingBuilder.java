@@ -46,15 +46,14 @@ final class RefTrackingBuilder {
         .nestedClass("PerThreadFactory");
   }
 
-  static RefTrackingBuilder create(
+  static Optional<RefTrackingBuilder> create(
       Model model,
       List<ParaParameter> properties,
       MethodSpec staticBuildMethod) {
-    return model.optionalRefTrackingBuilderClass().map(refTrackingBuilderClass -> {
-      ClassName perThreadFactoryClass = perThreadFactoryClass(model);
-      return new RefTrackingBuilder(model, properties, staticBuildMethod,
-          refTrackingBuilderClass, perThreadFactoryClass);
-    }).orElse(null);
+    return model.optionalRefTrackingBuilderClass()
+        .map(refTrackingBuilderClass ->
+            new RefTrackingBuilder(model, properties, staticBuildMethod,
+                refTrackingBuilderClass, perThreadFactoryClass(model)));
   }
 
   TypeSpec define() {

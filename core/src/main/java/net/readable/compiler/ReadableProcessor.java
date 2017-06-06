@@ -15,9 +15,10 @@ import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
 import javax.tools.JavaFileObject;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.io.Writer;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 import static javax.lang.model.util.ElementFilter.typesIn;
@@ -25,7 +26,7 @@ import static javax.tools.Diagnostic.Kind.ERROR;
 
 public final class ReadableProcessor extends AbstractProcessor {
 
-  private final Set<TypeName> done = new HashSet<>();
+  private final Set<String> done = new HashSet<>();
 
   @Override
   public Set<String> getSupportedAnnotationTypes() {
@@ -45,30 +46,24 @@ public final class ReadableProcessor extends AbstractProcessor {
         typesIn(env.getElementsAnnotatedWith(Readable.class));
     Util util = new Util(processingEnv);
     for (TypeElement sourceClassElement : typeElements) {
-      TypeName sourceClass = TypeName.get(sourceClassElement.asType());
+      String key = sourceClassElement.getQualifiedName().toString();
+      if (done.contains(key)) {
+        continue;
+      }
       try {
-        if (!done.add(sourceClass)) {
-          continue;
-        }
         Model model = Model.create(sourceClassElement, util);
         TypeSpec typeSpec = Analyser.create(model).analyse();
         write(rawType(model.generatedClass), typeSpec);
+        done.add(key);
       } catch (ValidationException e) {
         processingEnv.getMessager().printMessage(ERROR, e.getMessage(), e.about);
       } catch (Exception e) {
-        handleException(sourceClassElement, e);
-        return false;
+        String trace = getStackTraceAsString(e);
+        String message = "Unexpected error: " + trace;
+        processingEnv.getMessager().printMessage(ERROR, message);
       }
     }
     return false;
-  }
-
-  private void handleException(TypeElement typeElement, Exception e) {
-    e.printStackTrace();
-    String message = "Error processing " +
-        ClassName.get(typeElement) +
-        ": " + e.getMessage();
-    processingEnv.getMessager().printMessage(ERROR, message, typeElement);
   }
 
   private void write(ClassName generatedType, TypeSpec typeSpec) throws IOException {
@@ -94,5 +89,11 @@ public final class ReadableProcessor extends AbstractProcessor {
       return ((ParameterizedTypeName) typeName).rawType;
     }
     return ((ClassName) typeName);
+  }
+
+  private static String getStackTraceAsString(Throwable throwable) {
+    StringWriter stringWriter = new StringWriter();
+    throwable.printStackTrace(new PrintWriter(stringWriter));
+    return stringWriter.toString();
   }
 }
