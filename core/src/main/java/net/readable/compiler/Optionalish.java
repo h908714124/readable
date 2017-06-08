@@ -1,13 +1,9 @@
 package net.readable.compiler;
 
-import static net.readable.compiler.ReadableProcessor.rawType;
-import static net.readable.compiler.Util.AS_DECLARED;
-import static net.readable.compiler.Util.AS_TYPE_ELEMENT;
-import static net.readable.compiler.Util.equalsType;
-
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.FieldSpec;
+import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeVariableName;
@@ -16,6 +12,12 @@ import java.util.Map;
 import java.util.Optional;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.DeclaredType;
+
+import static javax.lang.model.element.Modifier.FINAL;
+import static net.readable.compiler.ReadableProcessor.rawType;
+import static net.readable.compiler.Util.AS_DECLARED;
+import static net.readable.compiler.Util.AS_TYPE_ELEMENT;
+import static net.readable.compiler.Util.equalsType;
 
 final class Optionalish extends ParaParameter {
 
@@ -32,17 +34,24 @@ final class Optionalish extends ParaParameter {
     OPTIONAL_PRIMITIVES.put("java.util.OptionalLong", TypeName.LONG);
   }
 
+  private static final String OF = "of";
+  private static final String OF_NULLABLE = "ofNullable";
+
   final ClassName wrapper;
   final TypeName wrapped;
   final Property property;
 
+  private final String of;
+
   private Optionalish(
       ClassName wrapper,
       TypeName wrapped,
-      Property property) {
+      Property property,
+      String of) {
     this.wrapper = wrapper;
     this.wrapped = wrapped;
     this.property = property;
+    this.of = of;
   }
 
   private static final class CheckoutResult {
@@ -89,13 +98,14 @@ final class Optionalish extends ParaParameter {
           typeElement.getQualifiedName().toString());
       return primitive != null ?
           Optional.of(new CheckoutResult(declaredType,
-              new Optionalish(ClassName.get(typeElement), primitive, property))) :
+              new Optionalish(ClassName.get(typeElement), primitive, property, OF))) :
           Optional.empty();
     }
     return equalsType(declaredType, JAVA_UTIL_OPTIONAL) ?
         Optional.of(new CheckoutResult(declaredType,
             new Optionalish(OPTIONAL_CLASS,
-                TypeName.get(declaredType.getTypeArguments().get(0)), property))) :
+                TypeName.get(declaredType.getTypeArguments().get(0)),
+                property, OF_NULLABLE))) :
         Optional.empty();
   }
 
@@ -119,6 +129,28 @@ final class Optionalish extends ParaParameter {
     return CodeBlock.of("$N.$N != null ? $N.$N : $T.empty()",
         builder, field, builder, field, wrapper);
   }
+
+  MethodSpec convenienceOverloadMethod() {
+    FieldSpec f = property.asField();
+    ParameterSpec p = ParameterSpec.builder(wrapped,
+        property.propertyName()).build();
+    CodeBlock.Builder block = CodeBlock.builder();
+    if (wrapper.equals(OPTIONAL_CLASS)) {
+      block.addStatement("this.$N = $T.$L($N)", f, wrapper, of, p);
+    } else {
+      block.addStatement("this.$N = $T.of($N)", f, wrapper, p);
+    }
+    return MethodSpec.methodBuilder(
+        property.propertyName())
+        .addCode(block.build())
+        .addStatement("return this")
+        .addParameter(p)
+        .addModifiers(FINAL)
+        .addModifiers(property.model.maybePublic())
+        .returns(property.model.generatedClass)
+        .build();
+  }
+
 
   @Override
   <R, P> R accept(Cases<R, P> cases, P p) {

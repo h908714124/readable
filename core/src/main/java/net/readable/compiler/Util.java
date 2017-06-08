@@ -9,6 +9,7 @@ import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeMirror;
@@ -101,6 +102,13 @@ final class Util {
       throw new AssertionError();
     }
     return declaredType.getTypeArguments().stream()
+        .map(TypeName::get)
+        .toArray(TypeName[]::new);
+  }
+
+  static TypeName[] typeArguments(TypeElement sourceClassElement) {
+    return sourceClassElement.getTypeParameters().stream()
+        .map(TypeParameterElement::asType)
         .map(TypeName::get)
         .toArray(TypeName[]::new);
   }

@@ -1,16 +1,5 @@
 package net.readable.compiler;
 
-import static javax.lang.model.element.Modifier.ABSTRACT;
-import static javax.lang.model.element.Modifier.FINAL;
-import static javax.lang.model.element.Modifier.PRIVATE;
-import static javax.lang.model.element.Modifier.STATIC;
-import static net.readable.compiler.ParaParameter.CLEANUP_CODE;
-import static net.readable.compiler.ParaParameter.GET_FIELD_VALUE;
-import static net.readable.compiler.ParaParameter.GET_PROPERTY;
-import static net.readable.compiler.ParaParameter.OPTIONAL_INFO;
-import static net.readable.compiler.ReadableProcessor.rawType;
-import static net.readable.compiler.Util.joinCodeBlocks;
-
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.FieldSpec;
@@ -22,6 +11,17 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.Generated;
+
+import static javax.lang.model.element.Modifier.ABSTRACT;
+import static javax.lang.model.element.Modifier.FINAL;
+import static javax.lang.model.element.Modifier.PRIVATE;
+import static javax.lang.model.element.Modifier.STATIC;
+import static net.readable.compiler.ParaParameter.ADD_OPTIONALISH_OVERLOAD;
+import static net.readable.compiler.ParaParameter.CLEANUP_CODE;
+import static net.readable.compiler.ParaParameter.GET_FIELD_VALUE;
+import static net.readable.compiler.ParaParameter.GET_PROPERTY;
+import static net.readable.compiler.ReadableProcessor.rawType;
+import static net.readable.compiler.Util.joinCodeBlocks;
 
 final class Analyser {
 
@@ -65,15 +65,9 @@ final class Analyser {
           builder.addType(PerThreadFactory.createStub(model));
         });
     for (ParaParameter property : properties) {
-      FieldSpec field = GET_PROPERTY.apply(property).asField();
-      builder.addField(field);
+      builder.addField(GET_PROPERTY.apply(property).asField());
       builder.addMethod(setterMethod(property));
-      OPTIONAL_INFO.apply(property)
-          .filter(Optionalish::isRegular)
-          .ifPresent(optionalish ->
-              builder.addMethod(
-                  optionalSetterMethod(property,
-                      optionalish)));
+      ADD_OPTIONALISH_OVERLOAD.accept(property, builder);
     }
     builder.addModifiers(model.maybePublic());
     return builder.addModifiers(ABSTRACT)

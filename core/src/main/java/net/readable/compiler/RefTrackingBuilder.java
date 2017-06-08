@@ -8,7 +8,6 @@ import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
-
 import java.util.List;
 import java.util.Optional;
 
@@ -50,7 +49,7 @@ final class RefTrackingBuilder {
       Model model,
       List<ParaParameter> properties,
       MethodSpec staticBuildMethod) {
-    return model.optionalRefTrackingBuilderClass()
+    return model.optionalRefTrackingBuilderClass
         .map(refTrackingBuilderClass ->
             new RefTrackingBuilder(model, properties, staticBuildMethod,
                 refTrackingBuilderClass, perThreadFactoryClass(model)));

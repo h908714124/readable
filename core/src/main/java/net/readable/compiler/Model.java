@@ -4,17 +4,17 @@ import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeVariableName;
-
-import javax.lang.model.element.Modifier;
-import javax.lang.model.element.TypeElement;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import javax.lang.model.element.Element;
+import javax.lang.model.element.Modifier;
+import javax.lang.model.element.TypeElement;
 
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static javax.lang.model.element.Modifier.PUBLIC;
 import static net.readable.compiler.ReadableProcessor.rawType;
+import static net.readable.compiler.Util.typeArguments;
 
 final class Model {
 
@@ -22,23 +22,23 @@ final class Model {
   private static final Modifier[] PUBLIC_MODIFIER = {PUBLIC};
   private static final Modifier[] NO_MODIFIERS = new Modifier[0];
 
+  final Optional<ClassName> optionalRefTrackingBuilderClass;
   final TypeName generatedClass;
   final TypeElement sourceClassElement;
   final TypeName sourceClass;
   final TypeName simpleBuilderClass;
-  private final ClassName refTrackingBuilderClass;
   final Util util;
 
   private Model(
       TypeName generatedClass,
       TypeElement sourceClassElement,
       TypeName simpleBuilderClass,
-      ClassName refTrackingBuilderClass,
+      Optional<ClassName> optionalRefTrackingBuilderClass,
       Util util) {
     this.generatedClass = generatedClass;
     this.sourceClassElement = sourceClassElement;
     this.simpleBuilderClass = simpleBuilderClass;
-    this.refTrackingBuilderClass = refTrackingBuilderClass;
+    this.optionalRefTrackingBuilderClass = optionalRefTrackingBuilderClass;
     this.sourceClass = TypeName.get(sourceClassElement.asType());
     this.util = util;
   }
@@ -46,36 +46,36 @@ final class Model {
   static Model create(
       TypeElement sourceClassElement,
       Util util) {
-    TypeName sourceClass = TypeName.get(sourceClassElement.asType());
-    TypeName generatedClass = peer(sourceClass);
-    TypeName simpleBuilderClass = nestedClass(generatedClass, "SimpleBuilder");
-    ClassName optionalRefTrackingBuilderClass =
-        typeArguments(generatedClass).isEmpty() ?
-            rawType(generatedClass).nestedClass("RefTrackingBuilder") :
-            null;
+    TypeName generatedClass = generatedClassName(sourceClassElement);
+    TypeName simpleBuilderClass = simpleBuilderClass(sourceClassElement, generatedClass);
+    Optional<ClassName> optionalRefTrackingBuilderClass =
+        sourceClassElement.getTypeParameters().isEmpty() ?
+            Optional.of(rawType(generatedClass).nestedClass("RefTrackingBuilder")) :
+            Optional.empty();
 
     return new Model(generatedClass,
         sourceClassElement, simpleBuilderClass,
         optionalRefTrackingBuilderClass, util);
   }
 
-  private static TypeName peer(TypeName type) {
+  private static TypeName generatedClassName(TypeElement sourceClassElement) {
+    TypeName type = TypeName.get(sourceClassElement.asType());
     String name = String.join("_", rawType(type).simpleNames()) + SUFFIX;
     ClassName className = rawType(type).topLevelClassName().peerClass(name);
-    return withTypevars(className, typeArguments(type));
+    return withTypevars(className, typeArguments(sourceClassElement));
   }
 
-  private static TypeName withTypevars(ClassName className, List<TypeName> typevars) {
-    if (typevars.isEmpty()) {
+  private static TypeName withTypevars(ClassName className, TypeName[] typevars) {
+    if (typevars.length == 0) {
       return className;
     }
-    return ParameterizedTypeName.get(className, typevars.toArray(
-        new TypeName[typevars.size()]));
+    return ParameterizedTypeName.get(className, typevars);
   }
 
-  private static TypeName nestedClass(TypeName generatedClass, String name) {
-    return withTypevars(rawType(generatedClass).nestedClass(name),
-        typeArguments(generatedClass));
+  private static TypeName simpleBuilderClass(
+      TypeElement sourceClassElement, TypeName generatedClass) {
+    return withTypevars(rawType(generatedClass).nestedClass("SimpleBuilder"),
+        typeArguments(sourceClassElement));
   }
 
   private boolean isPublic() {
@@ -95,24 +95,12 @@ final class Model {
         .collect(toList());
   }
 
-  private static List<TypeName> typeArguments(TypeName typeName) {
-    if (typeName instanceof ParameterizedTypeName) {
-      return ((ParameterizedTypeName) typeName).typeArguments;
-    }
-    return Collections.emptyList();
-  }
-
-  Optional<ClassName> optionalRefTrackingBuilderClass() {
-    return Optional.ofNullable(refTrackingBuilderClass);
-  }
-
   String cacheWarning() {
-    return "Caching not implemented: " +
-        rawType(sourceClass).simpleName() +
-        "<" +
-        typevars().stream()
-            .map(TypeVariableName::toString)
-            .collect(joining(", ")) +
-        "> has type parameters";
+    return String.format(
+        "Caching not implemented: %s has type parameters: <%s>",
+        sourceClassElement.getSimpleName(),
+        sourceClassElement.getTypeParameters().stream()
+            .map(Element::getSimpleName)
+            .collect(joining(", ")));
   }
 }

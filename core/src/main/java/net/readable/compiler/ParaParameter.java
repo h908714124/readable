@@ -2,6 +2,7 @@ package net.readable.compiler;
 
 import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.ParameterSpec;
+import com.squareup.javapoet.TypeSpec;
 import java.util.Optional;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
@@ -86,6 +87,20 @@ abstract class ParaParameter {
         @Override
         Optional<Optionalish> optionalish(Optionalish optionalish, Void _null) {
           return Optional.of(optionalish);
+        }
+      });
+
+  static final BiConsumer<ParaParameter, TypeSpec.Builder> ADD_OPTIONALISH_OVERLOAD =
+      asConsumer(new ParaParameter.Cases<Void, TypeSpec.Builder>() {
+        @Override
+        Void property(Property parameter, TypeSpec.Builder builder) {
+          return null;
+        }
+
+        @Override
+        Void optionalish(Optionalish optionalish, TypeSpec.Builder builder) {
+          builder.addMethod(optionalish.convenienceOverloadMethod());
+          return null;
         }
       });
 }
