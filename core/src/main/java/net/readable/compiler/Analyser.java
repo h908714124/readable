@@ -1,25 +1,27 @@
 package net.readable.compiler;
 
+import static javax.lang.model.element.Modifier.ABSTRACT;
+import static javax.lang.model.element.Modifier.FINAL;
+import static javax.lang.model.element.Modifier.PRIVATE;
+import static javax.lang.model.element.Modifier.STATIC;
+import static net.readable.compiler.ParaParameter.CLEANUP_CODE;
+import static net.readable.compiler.ParaParameter.GET_FIELD_VALUE;
+import static net.readable.compiler.ParaParameter.GET_PROPERTY;
+import static net.readable.compiler.ParaParameter.OPTIONAL_INFO;
+import static net.readable.compiler.ReadableProcessor.rawType;
+import static net.readable.compiler.Util.joinCodeBlocks;
+
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.TypeSpec;
-
-import javax.annotation.Generated;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-
-import static javax.lang.model.element.Modifier.ABSTRACT;
-import static javax.lang.model.element.Modifier.FINAL;
-import static javax.lang.model.element.Modifier.PRIVATE;
-import static javax.lang.model.element.Modifier.STATIC;
-import static net.readable.compiler.ParaParameter.AS_INITIALIZED_FIELD;
-import static net.readable.compiler.ParaParameter.GET_PROPERTY;
-import static net.readable.compiler.ParaParameter.OPTIONAL_INFO;
-import static net.readable.compiler.ReadableProcessor.rawType;
+import javax.annotation.Generated;
 
 final class Analyser {
 
@@ -63,7 +65,7 @@ final class Analyser {
           builder.addType(PerThreadFactory.createStub(model));
         });
     for (ParaParameter property : properties) {
-      FieldSpec field = AS_INITIALIZED_FIELD.apply(property);
+      FieldSpec field = GET_PROPERTY.apply(property).asField();
       builder.addField(field);
       builder.addMethod(setterMethod(property));
       OPTIONAL_INFO.apply(property)
@@ -87,7 +89,7 @@ final class Analyser {
   private MethodSpec setterMethod(ParaParameter property) {
     ParameterSpec p = ParameterSpec.builder(GET_PROPERTY.apply(property).type(),
         GET_PROPERTY.apply(property).propertyName()).build();
-    FieldSpec f = GET_PROPERTY.apply(property).asField().build();
+    FieldSpec f = GET_PROPERTY.apply(property).asField();
     return MethodSpec.methodBuilder(
         GET_PROPERTY.apply(property).propertyName())
         .addStatement("this.$N = $N", f, p)
@@ -103,7 +105,7 @@ final class Analyser {
       ParaParameter property, Optionalish optionalish) {
     ParameterSpec p = ParameterSpec.builder(optionalish.wrapped,
         GET_PROPERTY.apply(property).propertyName()).build();
-    FieldSpec f = GET_PROPERTY.apply(property).asField().build();
+    FieldSpec f = GET_PROPERTY.apply(property).asField();
     CodeBlock.Builder block = CodeBlock.builder();
     if (optionalish.isOptional()) {
       block.addStatement("this.$N = $T.ofNullable($N)", f, optionalish.wrapper, p);
@@ -153,8 +155,10 @@ final class Analyser {
     ParameterSpec input = ParameterSpec.builder(model.sourceClass, "input").build();
     CodeBlock.Builder block = CodeBlock.builder();
     for (ParaParameter property : properties) {
-      block.addStatement("$N.$N($N.$L)", builder, GET_PROPERTY.apply(property).propertyName(),
-          input, GET_PROPERTY.apply(property).access());
+      block.addStatement("$N.$N = $N.$L", builder,
+          GET_PROPERTY.apply(property).asField(),
+          input,
+          GET_PROPERTY.apply(property).access());
     }
     return MethodSpec.methodBuilder("init")
         .addCode(block.build())
@@ -168,19 +172,23 @@ final class Analyser {
       Model model, List<ParaParameter> properties) {
     ParameterSpec builder = ParameterSpec.builder(model.generatedClass,
         "builder").build();
-    CodeBlock.Builder block = CodeBlock.builder();
-    for (int i = 0; i < properties.size(); i++) {
-      ParaParameter property = properties.get(i);
-      FieldSpec f = GET_PROPERTY.apply(property).asField().build();
-      if (i > 0) {
-        block.add(",");
-      }
-      block.add("\n    $N.$N", builder, f);
+    ParameterSpec result = ParameterSpec.builder(model.sourceClass, "result")
+        .build();
+    List<CodeBlock> invocation = new ArrayList<>(properties.size());
+    for (ParaParameter parameter : properties) {
+      invocation.add(GET_FIELD_VALUE.apply(parameter, builder));
+    }
+    CodeBlock.Builder cleanup = CodeBlock.builder();
+    for (ParaParameter parameter : properties) {
+      CLEANUP_CODE.apply(parameter, builder).ifPresent(cleanup::add);
     }
     return MethodSpec.methodBuilder("build")
-        .addCode("return new $T(", model.sourceClass)
-        .addCode(block.build())
+        .addCode("$T $N = new $T(\n    ",
+            model.sourceClass, result, rawType(model.sourceClass))
+        .addCode(invocation.stream().collect(joinCodeBlocks(",\n    ")))
         .addCode(");\n")
+        .addCode(cleanup.build())
+        .addStatement("return $N", result)
         .addTypeVariables(model.typevars())
         .returns(model.sourceClass)
         .addParameter(builder)

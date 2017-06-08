@@ -1,15 +1,14 @@
 package net.readable.compiler;
 
-import com.squareup.javapoet.FieldSpec;
-import com.squareup.javapoet.TypeName;
-
-import javax.lang.model.element.ExecutableElement;
-import javax.lang.model.element.VariableElement;
-import javax.lang.model.type.TypeMirror;
-
 import static javax.lang.model.element.Modifier.ABSTRACT;
 import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.type.TypeKind.VOID;
+
+import com.squareup.javapoet.FieldSpec;
+import com.squareup.javapoet.TypeName;
+import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.VariableElement;
+import javax.lang.model.type.TypeMirror;
 
 final class Property extends ParaParameter {
 
@@ -80,10 +79,11 @@ final class Property extends ParaParameter {
     return signature.propertyName;
   }
 
-  FieldSpec.Builder asField() {
+  FieldSpec asField() {
     return FieldSpec.builder(type(),
         propertyName())
-        .addModifiers(PRIVATE);
+        .addModifiers(PRIVATE)
+        .build();
   }
 
   TypeMirror asType() {

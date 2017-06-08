@@ -1,19 +1,21 @@
 package net.readable.compiler;
 
-import com.squareup.javapoet.ClassName;
-import com.squareup.javapoet.TypeName;
-import com.squareup.javapoet.TypeVariableName;
-
-import javax.lang.model.element.TypeElement;
-import javax.lang.model.type.DeclaredType;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-
 import static net.readable.compiler.ReadableProcessor.rawType;
 import static net.readable.compiler.Util.AS_DECLARED;
 import static net.readable.compiler.Util.AS_TYPE_ELEMENT;
 import static net.readable.compiler.Util.equalsType;
+
+import com.squareup.javapoet.ClassName;
+import com.squareup.javapoet.CodeBlock;
+import com.squareup.javapoet.FieldSpec;
+import com.squareup.javapoet.ParameterSpec;
+import com.squareup.javapoet.TypeName;
+import com.squareup.javapoet.TypeVariableName;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.DeclaredType;
 
 final class Optionalish extends ParaParameter {
 
@@ -60,6 +62,14 @@ final class Optionalish extends ParaParameter {
         .map(checkoutResult -> checkoutResult.optionalish);
   }
 
+  static Optional<CodeBlock> emptyBlock(Property property, ParameterSpec builder) {
+    FieldSpec field = property.asField();
+    return checkout(property)
+        .map(checkoutResult -> checkoutResult.optionalish)
+        .map(optionalish -> CodeBlock.of("$N.$N != null ? $N.$N : $T.empty()",
+            builder, field, builder, field, optionalish.wrapper));
+  }
+
   private static Optional<CheckoutResult> checkout(
       Property property) {
     DeclaredType declaredType = property.asType().accept(AS_DECLARED, null);
@@ -102,6 +112,12 @@ final class Optionalish extends ParaParameter {
 
   boolean isRegular() {
     return !isIrregular();
+  }
+
+  CodeBlock getFieldValue(ParameterSpec builder) {
+    FieldSpec field = property.asField();
+    return CodeBlock.of("$N.$N != null ? $N.$N : $T.empty()",
+        builder, field, builder, field, wrapper);
   }
 
   @Override
