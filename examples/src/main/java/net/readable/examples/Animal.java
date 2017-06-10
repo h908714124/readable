@@ -1,5 +1,6 @@
 package net.readable.examples;
 
+import java.util.Optional;
 import net.readable.Readable;
 
 @Readable
@@ -11,9 +12,17 @@ class Animal {
   final String name;
   final boolean good;
 
-  Animal(String name, boolean good) {
+  final Optional<Optional<String>> maybeMaybe;
+  final Optional<String> maybe;
+
+  Animal(String name,
+         boolean good,
+         Optional<Optional<String>> maybeMaybe,
+         Optional<String> maybe) {
     this.name = name;
     this.good = good;
+    this.maybeMaybe = maybeMaybe;
+    this.maybe = maybe;
   }
 
   Animal_Builder toBuilder() {

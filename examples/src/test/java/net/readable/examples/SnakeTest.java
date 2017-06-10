@@ -1,5 +1,6 @@
 package net.readable.examples;
 
+import java.util.Optional;
 import org.junit.Test;
 
 import static java.util.Collections.emptyList;
@@ -14,10 +15,12 @@ public class SnakeTest {
     Snake snake = Snake_Builder.builder()
         .name("Kaa")
         .good(true)
+        .maybe("yes")
         .friends(singletonList("Python"))
         .build();
     assertThat(snake.name, is("Kaa"));
     assertThat(snake.getFriends(), is(singletonList("Python")));
+    assertThat(snake.maybe, is(Optional.of("yes")));
   }
 
   @Test

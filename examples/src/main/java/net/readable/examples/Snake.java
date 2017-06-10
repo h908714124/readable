@@ -1,8 +1,8 @@
 package net.readable.examples;
 
-import net.readable.Readable;
-
 import java.util.List;
+import java.util.Optional;
+import net.readable.Readable;
 
 @Readable
 final class Snake extends Animal {
@@ -13,8 +13,13 @@ final class Snake extends Animal {
   private final long length;
   private final List<String> friends;
 
-  Snake(String name, boolean good, long length, List<String> friends) {
-    super(name, good);
+  Snake(String name,
+        boolean good,
+        Optional<Optional<String>> maybeMaybe,
+        Optional<String> maybe,
+        long length,
+        List<String> friends) {
+    super(name, good, maybeMaybe, maybe);
     this.length = length;
     this.friends = friends;
   }
