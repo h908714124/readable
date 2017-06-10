@@ -1,6 +1,7 @@
 package net.readable.compiler;
 
 import com.squareup.javapoet.ClassName;
+import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeVariableName;
@@ -22,6 +23,8 @@ final class Model {
   private static final Modifier[] PUBLIC_MODIFIER = {PUBLIC};
   private static final Modifier[] NO_MODIFIERS = new Modifier[0];
 
+  private final ParameterSpec builderParameter;
+
   final Optional<ClassName> optionalRefTrackingBuilderClass;
   final TypeName generatedClass;
   final TypeElement sourceClassElement;
@@ -41,6 +44,7 @@ final class Model {
     this.optionalRefTrackingBuilderClass = optionalRefTrackingBuilderClass;
     this.sourceClass = TypeName.get(sourceClassElement.asType());
     this.util = util;
+    this.builderParameter = ParameterSpec.builder(generatedClass, "builder").build();
   }
 
   static Model create(
@@ -65,7 +69,7 @@ final class Model {
     return withTypevars(className, typeArguments(sourceClassElement));
   }
 
-  private static TypeName withTypevars(ClassName className, TypeName[] typevars) {
+  static TypeName withTypevars(ClassName className, TypeName[] typevars) {
     if (typevars.length == 0) {
       return className;
     }
@@ -102,5 +106,9 @@ final class Model {
         sourceClassElement.getTypeParameters().stream()
             .map(Element::getSimpleName)
             .collect(joining(", ")));
+  }
+
+  ParameterSpec builderParameter() {
+    return builderParameter;
   }
 }

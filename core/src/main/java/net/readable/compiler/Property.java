@@ -61,7 +61,8 @@ final class Property extends ParaParameter {
   }
 
   private ParaParameter enrich() {
-    return Optionalish.create(this).orElse(this);
+    return Collectionish.create(this).orElse(
+        Optionalish.create(this).orElse(this));
   }
 
   TypeName type() {

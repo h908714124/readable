@@ -86,8 +86,8 @@ final class Util {
     this.processingEnv = processingEnv;
   }
 
-  static TypeName[] typeArgumentSubtypes(VariableElement variableElement) {
-    DeclaredType declaredType = variableElement.asType().accept(AS_DECLARED, null);
+  static TypeName[] typeArgumentSubtypes(TypeMirror typeMirror) {
+    DeclaredType declaredType = typeMirror.accept(AS_DECLARED, null);
     if (declaredType == null) {
       throw new AssertionError();
     }
@@ -109,6 +109,13 @@ final class Util {
   static TypeName[] typeArguments(TypeElement sourceClassElement) {
     return sourceClassElement.getTypeParameters().stream()
         .map(TypeParameterElement::asType)
+        .map(TypeName::get)
+        .toArray(TypeName[]::new);
+  }
+
+  static TypeName[] typeArguments(TypeMirror typeMirror) {
+    DeclaredType type = typeMirror.accept(AS_DECLARED, null);
+    return type.getTypeArguments().stream()
         .map(TypeName::get)
         .toArray(TypeName[]::new);
   }

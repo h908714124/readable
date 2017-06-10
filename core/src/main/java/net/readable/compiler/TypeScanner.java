@@ -1,23 +1,23 @@
 package net.readable.compiler;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.util.ElementFilter;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 import static net.readable.compiler.Arity0.parameterlessMethods;
+import static net.readable.compiler.Cleanse.detox;
 import static net.readable.compiler.Util.asTypeElement;
 
 final class TypeScanner {
 
-  static List<ParaParameter> scan(
-      Model model) {
+  static List<ParaParameter> scan(Model model) {
     if (model.sourceClassElement.getModifiers().contains(Modifier.PRIVATE)) {
       throw new ValidationException("The class may not be private",
           model.sourceClassElement);
@@ -33,7 +33,7 @@ final class TypeScanner {
           model.sourceClassElement);
     }
     ExecutableElement constructor = constructor(model.sourceClassElement);
-    return getters(model.sourceClassElement, constructor, model, model.util);
+    return detox(getters(model.sourceClassElement, constructor, model));
   }
 
   private static ExecutableElement constructor(TypeElement sourceClassElement) {
@@ -69,8 +69,7 @@ final class TypeScanner {
   private static List<ParaParameter> getters(
       TypeElement sourceTypeElement,
       ExecutableElement constructor,
-      Model model,
-      Util util) {
+      Model model) {
     List<Signature> signatures = constructor.getParameters().stream()
         .map(Signature::create)
         .collect(Collectors.toList());
