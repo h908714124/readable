@@ -29,7 +29,7 @@ final class Cleanse {
     return parameters;
   }
 
-  static final Function<ParaParameter, List<String>> METHOD_NAMES =
+  private static final Function<ParaParameter, List<String>> METHOD_NAMES =
       asFunction(new ParaParameter.Cases<List<String>, Void>() {
         @Override
         List<String> property(Property property, Void _null) {
@@ -47,7 +47,7 @@ final class Cleanse {
         }
       });
 
-  static final Function<ParaParameter, List<String>> FIELD_NAMES =
+  private static final Function<ParaParameter, List<String>> FIELD_NAMES =
       asFunction(new ParaParameter.Cases<List<String>, Void>() {
         @Override
         List<String> property(Property property, Void _null) {
@@ -66,7 +66,7 @@ final class Cleanse {
         }
       });
 
-  static final Function<ParaParameter, ParaParameter> NO_ACCUMULATOR =
+  private static final Function<ParaParameter, ParaParameter> NO_ACCUMULATOR =
       asFunction(new ParaParameter.Cases<ParaParameter, Void>() {
         @Override
         ParaParameter property(Property property, Void _null) {

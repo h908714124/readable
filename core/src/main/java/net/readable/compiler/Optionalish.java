@@ -1,5 +1,10 @@
 package net.readable.compiler;
 
+import static javax.lang.model.element.Modifier.FINAL;
+import static net.readable.compiler.Util.AS_DECLARED;
+import static net.readable.compiler.Util.AS_TYPE_ELEMENT;
+import static net.readable.compiler.Util.equalsType;
+
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.FieldSpec;
@@ -11,11 +16,6 @@ import java.util.Map;
 import java.util.Optional;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.DeclaredType;
-
-import static javax.lang.model.element.Modifier.FINAL;
-import static net.readable.compiler.Util.AS_DECLARED;
-import static net.readable.compiler.Util.AS_TYPE_ELEMENT;
-import static net.readable.compiler.Util.equalsType;
 
 final class Optionalish extends ParaParameter {
 
@@ -35,8 +35,8 @@ final class Optionalish extends ParaParameter {
   private static final String OF = "of";
   private static final String OF_NULLABLE = "ofNullable";
 
-  final ClassName wrapper;
-  final TypeName wrapped;
+  private final ClassName wrapper;
+  private final TypeName wrapped;
   final Property property;
 
   private final String of;
@@ -55,6 +55,7 @@ final class Optionalish extends ParaParameter {
   private static final class CheckoutResult {
     final DeclaredType declaredType;
     final Optionalish optionalish;
+
     CheckoutResult(DeclaredType declaredType, Optionalish optionalish) {
       this.declaredType = declaredType;
       this.optionalish = optionalish;
@@ -70,12 +71,16 @@ final class Optionalish extends ParaParameter {
   }
 
   static Optional<CodeBlock> emptyBlock(Property property) {
-    FieldSpec field = property.asField();
-    ParameterSpec builder = property.model.builderParameter();
     return checkout(property)
         .map(checkoutResult -> checkoutResult.optionalish)
-        .map(optionalish -> CodeBlock.of("$N.$N != null ? $N.$N : $T.empty()",
-            builder, field, builder, field, optionalish.wrapper));
+        .map(Optionalish::getFieldValue);
+  }
+
+  CodeBlock getFieldValue() {
+    FieldSpec field = property.asField();
+    ParameterSpec builder = property.model.builderParameter();
+    return CodeBlock.of("$N.$N != null ? $N.$N : $T.empty()",
+        builder, field, builder, field, wrapper);
   }
 
   private static Optional<CheckoutResult> checkout(
@@ -113,13 +118,6 @@ final class Optionalish extends ParaParameter {
     return wrapper.equals(OPTIONAL_CLASS);
   }
 
-  CodeBlock getFieldValue() {
-    FieldSpec field = property.asField();
-    ParameterSpec builder = property.model.builderParameter();
-    return CodeBlock.of("$N.$N != null ? $N.$N : $T.empty()",
-        builder, field, builder, field, wrapper);
-  }
-
   MethodSpec convenienceOverloadMethod() {
     FieldSpec f = property.asField();
     ParameterSpec p = ParameterSpec.builder(wrapped,
@@ -140,7 +138,6 @@ final class Optionalish extends ParaParameter {
         .returns(property.model.generatedClass)
         .build();
   }
-
 
   @Override
   <R, P> R accept(Cases<R, P> cases, P p) {
